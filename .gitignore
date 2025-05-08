@@ -1,0 +1,28 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.Python
+
+# Node
+node_modules/
+npm-debug.log
+
+# Data files
+data/
+*.mp4
+*.mp3
+*.wav
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
