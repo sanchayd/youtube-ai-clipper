@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: YouTube AI Clipper - Initial Deployment
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+
+Resources:
+  YouTubeDownloaderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: package/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.10
+      Layers:
+        - !ImportValue LayerVersionArn-aws-lambda-powertools-python-layer-v3-python310-x86-64
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Environment:
+        Variables:
+          PYTHONPATH: /var/task
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /video-info
+            Method: post
+
+Outputs:
+  ApiEndpoint:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/video-info"
