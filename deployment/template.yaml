@@ -15,7 +15,7 @@ Resources:
       Handler: lambda_function.lambda_handler
       Runtime: python3.10
       Layers:
-        - !ImportValue LayerVersionArn-aws-lambda-powertools-python-layer-v3-python310-x86-64
+        - "arn:aws:lambda:us-east-1:767242440716:layer:aws-lambda-powertools-python-layer-v3-python310-x86-64:1"
       Policies:
         - AWSLambdaBasicExecutionRole
       Environment:
