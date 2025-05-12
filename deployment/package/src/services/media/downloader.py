@@ -40,9 +40,7 @@ class YouTubeRepository(MediaRepository):
     
     def get_info(self, url: str) -> Dict[str, Any]:
         """
-        Get metadata about the YouTube video.
-        
-        Implements simple caching to avoid repeat API calls.
+        Get metadata about the YouTube video with better handling for API restrictions.
         """
         cache_key = f"info_{url}"
         
@@ -52,8 +50,19 @@ class YouTubeRepository(MediaRepository):
             return self._cache[cache_key]
         
         try:
-            # Get video info
-            yt = pytube.YouTube(url)
+            # Set custom headers to bypass YouTube restrictions
+            yt = pytube.YouTube(
+                url,
+                use_oauth=False,
+                allow_oauth_cache=False
+            )
+            
+            # Add headers that mimic a real browser
+            yt.headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            }
             
             # Extract relevant information
             info = {
@@ -61,7 +70,7 @@ class YouTubeRepository(MediaRepository):
                 "title": yt.title,
                 "length_seconds": yt.length,
                 "author": yt.author,
-                "publish_date": yt.publish_date,
+                "publish_date": str(yt.publish_date) if yt.publish_date else None,
                 "views": yt.views,
                 "thumbnail_url": yt.thumbnail_url
             }
@@ -71,8 +80,11 @@ class YouTubeRepository(MediaRepository):
             return info
             
         except PytubeError as e:
-            logger.error(f"Error getting video info: {str(e)}")
+            logger.error(f"PyTube error for URL {url}: {str(e)}")
             raise DownloadError(f"Failed to get video info: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error for URL {url}: {str(e)}")
+            raise DownloadError(f"Unexpected error processing video: {str(e)}")
     
     def download(self, url: str, output_path: Optional[str] = None) -> str:
         """

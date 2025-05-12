@@ -24,7 +24,13 @@ def lambda_handler(event, context):
         # Get YouTube URL from the request
         body = {}
         if event.get('body'):
-            body = json.loads(event.get('body', '{}'))
+            try:
+                body = json.loads(event.get('body', '{}'))
+            except json.JSONDecodeError:
+                return {
+                    'statusCode': 400,
+                    'body': json.dumps({'error': 'Invalid JSON in request body'})
+                }
         
         youtube_url = body.get('youtube_url')
         
@@ -33,6 +39,8 @@ def lambda_handler(event, context):
                 'statusCode': 400,
                 'body': json.dumps({'error': 'Missing youtube_url parameter'})
             }
+        
+        logger.info(f"Processing YouTube URL: {youtube_url}")
             
         # Create the YouTube repository
         repo = get_media_repository(max_duration_minutes=10)
@@ -56,8 +64,11 @@ def lambda_handler(event, context):
             'body': json.dumps({'error': str(e)})
         }
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': f'Internal server error: {str(e)}'})
+            'body': json.dumps({
+                'error': 'Internal server error',
+                'details': str(e)
+            })
         }
