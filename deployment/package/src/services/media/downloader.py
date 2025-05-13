@@ -1,14 +1,14 @@
-"""YouTube video downloader service implementing the Repository pattern."""
+"""YouTube video downloader service using official YouTube API."""
 
 import os
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, Tuple
-import tempfile
+from typing import Optional, Dict, Any
 import time
+from dotenv import load_dotenv
 
-import pytube
-from pytube.exceptions import PytubeError
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from src.services.media.exceptions import DownloadError, UnsupportedVideoError, VideoTooLargeError
 
@@ -16,13 +16,11 @@ from src.services.media.exceptions import DownloadError, UnsupportedVideoError, 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load environment variables
+load_dotenv()
+
 class MediaRepository(ABC):
     """Abstract interface for media repositories."""
-    
-    @abstractmethod
-    def download(self, url: str, output_path: Optional[str] = None) -> str:
-        """Download media from the given URL."""
-        pass
     
     @abstractmethod
     def get_info(self, url: str) -> Dict[str, Any]:
@@ -31,16 +29,36 @@ class MediaRepository(ABC):
 
 
 class YouTubeRepository(MediaRepository):
-    """Repository implementation for YouTube videos with memory optimization."""
+    """Repository implementation for YouTube videos using official API."""
     
     def __init__(self, max_duration_minutes: int = 120):
         """Initialize repository with constraints."""
         self.max_duration_minutes = max_duration_minutes
         self._cache = {}  # Simple in-memory cache for video information
+        
+        # Get API key from environment
+        api_key = os.getenv('YOUTUBE_API_KEY')
+        if not api_key:
+            logger.warning("YouTube API key not found in environment variables")
+            raise ValueError("YouTube API key is required. Set YOUTUBE_API_KEY environment variable.")
+            
+        logger.info("Initializing YouTube API client")
+        self.youtube = build('youtube', 'v3', developerKey=api_key)
+    
+    def _extract_video_id(self, url: str) -> str:
+        """Extract video ID from YouTube URL."""
+        if "youtube.com/watch" in url:
+            import urllib.parse as urlparse
+            parsed_url = urlparse.urlparse(url)
+            return urlparse.parse_qs(parsed_url.query)['v'][0]
+        elif "youtu.be/" in url:
+            return url.split("youtu.be/")[1].split("?")[0]
+        else:
+            raise DownloadError(f"Could not extract video ID from URL: {url}")
     
     def get_info(self, url: str) -> Dict[str, Any]:
         """
-        Get metadata about the YouTube video with better handling for API restrictions.
+        Get metadata about the YouTube video using official API.
         """
         cache_key = f"info_{url}"
         
@@ -50,107 +68,78 @@ class YouTubeRepository(MediaRepository):
             return self._cache[cache_key]
         
         try:
-            # Set custom headers to bypass YouTube restrictions
-            yt = pytube.YouTube(
-                url,
-                use_oauth=False,
-                allow_oauth_cache=False
-            )
+            # Extract video ID from URL
+            video_id = self._extract_video_id(url)
+            logger.info(f"Extracted video ID: {video_id}")
             
-            # Add headers that mimic a real browser
-            yt.headers = {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            }
+            # Get video info from YouTube API
+            response = self.youtube.videos().list(
+                part="snippet,contentDetails,statistics",
+                id=video_id
+            ).execute()
             
-            # Extract relevant information
-            info = {
-                "id": yt.video_id,
-                "title": yt.title,
-                "length_seconds": yt.length,
-                "author": yt.author,
-                "publish_date": str(yt.publish_date) if yt.publish_date else None,
-                "views": yt.views,
-                "thumbnail_url": yt.thumbnail_url
-            }
+            # Check if video exists
+            if not response['items']:
+                raise DownloadError(f"Video not found: {url}")
             
-            # Cache the result
-            self._cache[cache_key] = info
-            return info
+            video = response['items'][0]
             
-        except PytubeError as e:
-            logger.error(f"PyTube error for URL {url}: {str(e)}")
-            raise DownloadError(f"Failed to get video info: {str(e)}")
-        except Exception as e:
-            logger.error(f"Unexpected error for URL {url}: {str(e)}")
-            raise DownloadError(f"Unexpected error processing video: {str(e)}")
-    
-    def download(self, url: str, output_path: Optional[str] = None) -> str:
-        """
-        Download a YouTube video and return the path to the downloaded file.
-        
-        Implements:
-        - Circuit breaker pattern with retries
-        - Memory usage optimization with streaming
-        - Resource cleanup
-        - Duration validation
-        """
-        # Default to data directory if no output path specified
-        if not output_path:
-            output_path = os.path.join(os.getcwd(), "data", "downloads")
-            os.makedirs(output_path, exist_ok=True)
-        
-        try:
-            # Get video info to check constraints before downloading
-            info = self.get_info(url)
+            # Parse duration (in ISO 8601 format)
+            duration_str = video['contentDetails']['duration']
+            duration_seconds = self._parse_duration(duration_str)
             
             # Check video length constraint
-            video_minutes = info["length_seconds"] / 60
+            video_minutes = duration_seconds / 60
             if video_minutes > self.max_duration_minutes:
                 raise VideoTooLargeError(
                     f"Video duration ({video_minutes:.1f} minutes) exceeds "
                     f"maximum allowed ({self.max_duration_minutes} minutes)"
                 )
             
-            # Create pytube object with progressive streams for better control
-            yt = pytube.YouTube(url)
+            # Extract relevant information
+            info = {
+                "id": video_id,
+                "title": video['snippet']['title'],
+                "length_seconds": duration_seconds,
+                "author": video['snippet']['channelTitle'],
+                "publish_date": video['snippet']['publishedAt'],
+                "views": int(video['statistics'].get('viewCount', 0)),
+                "thumbnail_url": video['snippet']['thumbnails']['default']['url']
+            }
             
-            # Select the stream - prioritize mp4 with audio
-            stream = yt.streams.filter(progressive=True, file_extension="mp4").order_by("resolution").desc().first()
+            # Cache the result
+            self._cache[cache_key] = info
+            return info
             
-            if not stream:
-                raise UnsupportedVideoError("No suitable video stream found")
-            
-            # Download with retry logic - example of circuit breaker pattern
-            max_retries = 3
-            retry = 0
-            
-            while retry < max_retries:
-                try:
-                    logger.info(f"Downloading {info['title']} ({url})")
-                    file_path = stream.download(output_path=output_path)
-                    logger.info(f"Download complete: {file_path}")
-                    return file_path
-                except Exception as e:
-                    retry += 1
-                    if retry >= max_retries:
-                        raise DownloadError(f"Failed to download after {max_retries} attempts: {str(e)}")
-                    
-                    # Exponential backoff - important for rate limiting
-                    wait_time = 2 ** retry
-                    logger.warning(f"Download failed, retrying in {wait_time}s: {str(e)}")
-                    time.sleep(wait_time)
-        
-        except PytubeError as e:
-            logger.error(f"PyTube error: {str(e)}")
-            raise DownloadError(f"Failed to download video: {str(e)}")
+        except HttpError as e:
+            logger.error(f"YouTube API error: {str(e)}")
+            raise DownloadError(f"YouTube API error: {str(e)}")
         except Exception as e:
             logger.error(f"Unexpected error: {str(e)}")
-            raise DownloadError(f"Unexpected error: {str(e)}")
+            raise DownloadError(f"Unexpected error processing video: {str(e)}")
+    
+    def _parse_duration(self, duration_str: str) -> int:
+        """Parse ISO 8601 duration to seconds."""
+        import isodate
+        
+        try:
+            return int(isodate.parse_duration(duration_str).total_seconds())
+        except Exception as e:
+            logger.error(f"Error parsing duration: {str(e)}")
+            # Fallback parsing if isodate fails
+            import re
+            hours = re.search(r'(\d+)H', duration_str)
+            minutes = re.search(r'(\d+)M', duration_str)
+            seconds = re.search(r'(\d+)S', duration_str)
+            
+            hours = int(hours.group(1)) if hours else 0
+            minutes = int(minutes.group(1)) if minutes else 0
+            seconds = int(seconds.group(1)) if seconds else 0
+            
+            return hours * 3600 + minutes * 60 + seconds
 
 
-# Factory function - demonstrates Factory pattern
+# Factory function
 def get_media_repository(source_type: str = "youtube", **kwargs) -> MediaRepository:
     """Factory function to get the appropriate media repository."""
     if source_type.lower() == "youtube":

@@ -9,12 +9,30 @@ samconfig.toml
 aws-credentials.json
 credentials.csv
 
-# Deployment package dependencies
-deployment/package/bin/
-deployment/package/pytube/
-deployment/package/dotenv/
-deployment/package/*-*.dist-info/
+# Python installed packages and dependencies
+deployment/package/**/
+deployment/package/*.py
+deployment/package/*.dist-info/
 deployment/package/*.egg-info/
+deployment/package/bin/
+deployment/package/certifi/
+deployment/package/charset_normalizer/
+deployment/package/google/
+deployment/package/googleapiclient/
+deployment/package/httplib2/
+deployment/package/idna/
+deployment/package/isodate/
+deployment/package/proto/
+deployment/package/pyasn1/
+deployment/package/pyasn1_modules/
+deployment/package/pyparsing/
+deployment/package/requests/
+deployment/package/rsa/
+deployment/package/uritemplate/
+deployment/package/urllib3/
+deployment/package/cachetools/
+deployment/package/apiclient/
+deployment/isodate*/
 
 # But keep these specific files
 !deployment/package/lambda_function.py
