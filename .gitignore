@@ -9,35 +9,22 @@ samconfig.toml
 aws-credentials.json
 credentials.csv
 
-# Python installed packages and dependencies
-deployment/package/**/
-deployment/package/*.py
-deployment/package/*.dist-info/
-deployment/package/*.egg-info/
-deployment/package/bin/
-deployment/package/certifi/
-deployment/package/charset_normalizer/
-deployment/package/google/
-deployment/package/googleapiclient/
-deployment/package/httplib2/
-deployment/package/idna/
-deployment/package/isodate/
-deployment/package/proto/
-deployment/package/pyasn1/
-deployment/package/pyasn1_modules/
-deployment/package/pyparsing/
-deployment/package/requests/
-deployment/package/rsa/
-deployment/package/uritemplate/
-deployment/package/urllib3/
-deployment/package/cachetools/
-deployment/package/apiclient/
+# Ignore all installed packages in deployment/package/
+deployment/package/*/
+deployment/package/*.*
 deployment/isodate*/
 
-# But keep these specific files
+# BUT do not ignore these specific paths
+!deployment/package/src/
 !deployment/package/lambda_function.py
 !deployment/package/requirements.txt
-!deployment/package/src/
+
+# Allow Python files in specific directories
+!deployment/package/src/services/
+!deployment/package/src/services/media/
+!deployment/package/src/services/transcription/
+!deployment/package/src/services/clip_generator/
+!deployment/package/src/services/**/*.py
 
 # Python virtual environments
 venv/
