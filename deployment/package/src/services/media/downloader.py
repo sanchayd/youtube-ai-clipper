@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
 import time
 from dotenv import load_dotenv
+import subprocess
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -117,6 +118,28 @@ class YouTubeRepository(MediaRepository):
         except Exception as e:
             logger.error(f"Unexpected error: {str(e)}")
             raise DownloadError(f"Unexpected error processing video: {str(e)}")
+        
+        # Add to src/services/media/downloader.py
+    def download_audio_only(self, url: str, output_path: Optional[str] = None) -> str:
+        """
+        Download only the audio track from a YouTube video (smaller file size).
+        """
+        video_id = self._extract_video_id(url)
+        
+        # Create temporary directory if output_path not specified
+        if not output_path:
+            output_path = f"/tmp/{video_id}"
+            os.makedirs(output_path, exist_ok=True)
+        
+        output_file = f"{output_path}/{video_id}.mp3"
+        
+        # Use youtube-dl command line (more reliable than libraries)
+        command = f"youtube-dl -x --audio-format mp3 -o {output_file} {url}"
+        
+        # Execute the command
+        subprocess.run(command, shell=True, check=True)
+        
+        return output_file    
     
     def _parse_duration(self, duration_str: str) -> int:
         """Parse ISO 8601 duration to seconds."""
