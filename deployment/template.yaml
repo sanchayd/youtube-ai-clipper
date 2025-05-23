@@ -9,7 +9,7 @@ Resources:
       CodeUri: package/
       Handler: lambda_function.lambda_handler
       Runtime: python3.10
-      Timeout: 30
+      Timeout: 60
       MemorySize: 512
       Environment:
         Variables:

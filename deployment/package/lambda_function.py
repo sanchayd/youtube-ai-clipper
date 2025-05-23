@@ -2,7 +2,6 @@ import json
 import os
 import sys
 import logging
-import tempfile
 
 # Set up logging
 logger = logging.getLogger()
@@ -11,20 +10,18 @@ logger.setLevel(logging.INFO)
 # Add the package directory to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Import your services
+# Import services
 from src.services.media.downloader import get_media_repository
-from src.services.transcription.whisper_service import WhisperTranscriptionService
-from src.services.clip_generator.ffmpeg_service import ClipGenerator
 from src.services.media.exceptions import MediaServiceError
 
 def lambda_handler(event, context):
     """
-    AWS Lambda handler function for YouTube video processing.
+    AWS Lambda handler function for YouTube video info retrieval with simulated topic detection.
     """
     logger.info(f"Received event: {event}")
     
     try:
-        # Get request parameters
+        # Parse request
         body = {}
         if event.get('body'):
             try:
@@ -36,25 +33,46 @@ def lambda_handler(event, context):
                 }
         
         youtube_url = body.get('youtube_url')
-        topic = body.get('topic', 'bitcoin')  # Default to 'bitcoin' if not specified
+        topic = body.get('topic', 'bitcoin')
         
         if not youtube_url:
             return {
                 'statusCode': 400,
                 'body': json.dumps({'error': 'Missing youtube_url parameter'})
             }
-        
-        # For now, we'll just get video info and return it
-        # In a future iteration, we'll implement the full processing pipeline
+            
+        # Get video metadata
         repo = get_media_repository(max_duration_minutes=10)
-        video_info = repo.get_info(youtube_url)
+        info = repo.get_info(youtube_url)
         
+        # Simulate topic detection (in a real implementation, this would use Whisper)
+        simulated_transcript = [
+            "Hi, I'm at the zoo.",
+            "This is the first YouTube video ever uploaded.",
+            "The elephants here are cool, and I heard someone talking about bitcoin yesterday.",
+            "Anyway, that's about it."
+        ]
+        
+        # Find topic mentions
+        topic_matches = []
+        for i, text in enumerate(simulated_transcript):
+            if topic.lower() in text.lower():
+                topic_matches.append({
+                    "segment": i,
+                    "text": text,
+                    "start_time": i * 5,  # Simulated timestamp
+                    "end_time": (i + 1) * 5  # Simulated timestamp
+                })
+        
+        # Return results
         return {
             'statusCode': 200,
             'body': json.dumps({
                 'message': 'Video info retrieved successfully',
-                'video_info': video_info,
-                'next_step': 'Implement audio extraction and transcription'
+                'video_info': info,
+                'simulated_transcript': simulated_transcript,
+                'topic_mentions': topic_matches,
+                'note': 'This is using a simulated transcript. Full Whisper integration would be implemented as a separate microservice.'
             })
         }
         
@@ -73,3 +91,4 @@ def lambda_handler(event, context):
                 'details': str(e)
             })
         }
+    
