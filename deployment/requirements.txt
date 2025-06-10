@@ -1,0 +1,5 @@
+# No external dependencies for this demo
+# Production version would include:
+# google-api-python-client
+# openai-whisper
+# ffmpeg-python

@@ -1,68 +1,31 @@
-# AWS SAM build directory
-.aws-sam/
+# AWS SAM build artifacts
+deployment/.aws-sam/
+deployment/samconfig.toml
 
-# AWS SAM deployment configuration
-samconfig.toml
-
-# AWS Credentials
-.aws/
-aws-credentials.json
-credentials.csv
-
-# Ignore all installed packages in deployment/package/
-deployment/package/*/
-deployment/package/*.*
-deployment/isodate*/
-
-# BUT do not ignore these specific paths
-!deployment/package/src/
-!deployment/package/lambda_function.py
-!deployment/package/requirements.txt
-
-# Allow Python files in specific directories
-!deployment/package/src/services/
-!deployment/package/src/services/media/
-!deployment/package/src/services/transcription/
-!deployment/package/src/services/clip_generator/
-!deployment/package/src/services/**/*.py
-
-# Python virtual environments
-venv/
-.venv/
-env/
-ENV/
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 .Python
-*.so
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
+venv/
+.venv/
+env/
+ENV/
 
 # Environment variables
 .env
-.env.local
-.env.*.local
+*.env
 
-# macOS specific files
+# macOS
 .DS_Store
-.AppleDouble
-.LSOverride
-._*
 
-# IDE specific files
+# IDE
 .idea/
 .vscode/
 *.swp
-*.swo
-*~
 
-# Lambda deployment packages
+# Logs
+*.log
+
+# Build artifacts
 *.zip
-
-# Large media files that might be used in testing
-*.mp4
-*.mp3
-*.wav
