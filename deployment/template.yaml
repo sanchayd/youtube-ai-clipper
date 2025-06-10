@@ -1,29 +1,53 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: YouTube AI Clipper - Initial Deployment
+Description: YouTube AI Clipper - Professional Demo
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.10
 
 Resources:
-  YouTubeDownloaderFunction:
+  VideoAnalysisFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: package/
-      Handler: lambda_function.lambda_handler
-      Runtime: python3.10
-      Timeout: 60
-      MemorySize: 512
-      Environment:
-        Variables:
-          YOUTUBE_API_KEY: "AIzaSyAsZceUU693rWYz1cuXSSzQbHKlM4gBGfU"
+      CodeUri: ../src/
+      Handler: handlers.video_handler.lambda_handler
+      Description: Analyzes YouTube videos for topic mentions
       Policies:
         - AWSLambdaBasicExecutionRole
       Events:
-        ApiEvent:
+        VideoAnalysisApi:
           Type: Api
           Properties:
-            Path: /video-info
+            Path: /analyze
             Method: post
+            
+  HealthCheckFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.video_handler.lambda_handler
+      Description: Health check endpoint
+      Events:
+        HealthCheckApi:
+          Type: Api
+          Properties:
+            Path: /health
+            Method: get
 
 Outputs:
-  ApiEndpoint:
-    Description: "API Gateway endpoint URL"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/video-info"
+  ApiGatewayUrl:
+    Description: URL of the API Gateway
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiUrl"
+      
+  VideoAnalysisEndpoint:
+    Description: Video Analysis Endpoint
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/analyze"
+    
+  HealthCheckEndpoint:
+    Description: Health Check Endpoint  
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/health"
