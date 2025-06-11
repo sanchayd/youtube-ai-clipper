@@ -1,5 +1,5 @@
 """
-AWS Lambda handler for video processing requests.
+AWS Lambda handler for video processing requests with real YouTube API integration.
 """
 import json
 import logging
@@ -54,7 +54,7 @@ def lambda_handler(event, context):
         mentions = topic_service.find_topic_mentions(transcript, topic)
         clips = topic_service.generate_clip_timestamps(mentions)
         
-        # Build response
+        # Build response with additional API info
         response_data = {
             'status': 'success',
             'video_info': video_info,
@@ -65,10 +65,14 @@ def lambda_handler(event, context):
                 'suggested_clips': clips
             },
             'transcript_preview': transcript,
+            'api_info': {
+                'youtube_api_used': video_info.get('api_source') == 'youtube_data_api_v3',
+                'environment': 'production' if os.getenv('YOUTUBE_API_KEY') else 'demo'
+            },
             'processing_notes': [
-                'This is a demo implementation using simulated data',
-                'Production version would integrate with YouTube Data API',
-                'Real transcription would use Whisper or similar service'
+                'Video metadata: ' + ('Real YouTube Data API' if video_info.get('api_source') == 'youtube_data_api_v3' else 'Demo data'),
+                'Transcript: Simulated data (Whisper integration coming next)',
+                'Topic detection: Real algorithm on simulated transcript'
             ]
         }
         
