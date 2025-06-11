@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: YouTube AI Clipper - With Real YouTube API Integration
+Description: YouTube AI Clipper - Debug Mode
 
 Globals:
   Function:
@@ -20,8 +20,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../src/
-      Handler: handlers.video_handler.lambda_handler
-      Description: Analyzes YouTube videos for topic mentions with real API
+      Handler: handlers.debug_handler.lambda_handler
+      Description: Debug handler to identify issues
       Environment:
         Variables:
           YOUTUBE_API_KEY: !Ref YouTubeApiKey
@@ -35,12 +35,6 @@ Resources:
             Method: post
 
 Outputs:
-  ApiGatewayUrl:
-    Description: URL of the API Gateway
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
-    Export:
-      Name: !Sub "${AWS::StackName}-ApiUrl"
-      
   VideoAnalysisEndpoint:
-    Description: Video Analysis Endpoint
+    Description: Video Analysis Endpoint (Debug Mode)
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/analyze"
