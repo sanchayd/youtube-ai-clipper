@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: YouTube AI Clipper - Debug Mode
+Description: YouTube AI Clipper - With Dependencies Fixed
 
 Globals:
   Function:
@@ -20,8 +20,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../src/
-      Handler: handlers.debug_handler.lambda_handler
-      Description: Debug handler to identify issues
+      Handler: handlers.video_handler.lambda_handler
+      Description: Analyzes YouTube videos for topic mentions with real API
       Environment:
         Variables:
           YOUTUBE_API_KEY: !Ref YouTubeApiKey
@@ -36,5 +36,5 @@ Resources:
 
 Outputs:
   VideoAnalysisEndpoint:
-    Description: Video Analysis Endpoint (Debug Mode)
+    Description: Video Analysis Endpoint
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/analyze"
