@@ -1,12 +1,19 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: YouTube AI Clipper - Professional Demo
+Description: YouTube AI Clipper - With Real YouTube API Integration
 
 Globals:
   Function:
     Timeout: 30
-    MemorySize: 256
+    MemorySize: 512
     Runtime: python3.10
+
+Parameters:
+  YouTubeApiKey:
+    Type: String
+    Description: YouTube Data API v3 Key
+    Default: "AIzaSyAsZceUU693rWYz1cuXSSzQbHKlM4gBGfU"
+    NoEcho: true
 
 Resources:
   VideoAnalysisFunction:
@@ -14,7 +21,10 @@ Resources:
     Properties:
       CodeUri: ../src/
       Handler: handlers.video_handler.lambda_handler
-      Description: Analyzes YouTube videos for topic mentions
+      Description: Analyzes YouTube videos for topic mentions with real API
+      Environment:
+        Variables:
+          YOUTUBE_API_KEY: !Ref YouTubeApiKey
       Policies:
         - AWSLambdaBasicExecutionRole
       Events:
@@ -23,19 +33,6 @@ Resources:
           Properties:
             Path: /analyze
             Method: post
-            
-  HealthCheckFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ../src/
-      Handler: handlers.video_handler.lambda_handler
-      Description: Health check endpoint
-      Events:
-        HealthCheckApi:
-          Type: Api
-          Properties:
-            Path: /health
-            Method: get
 
 Outputs:
   ApiGatewayUrl:
@@ -47,7 +44,3 @@ Outputs:
   VideoAnalysisEndpoint:
     Description: Video Analysis Endpoint
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/analyze"
-    
-  HealthCheckEndpoint:
-    Description: Health Check Endpoint  
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/health"
