@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: YouTube AI Clipper - With Dependencies Fixed
+Description: YouTube AI Clipper - With Real Transcription
 
 Globals:
   Function:
-    Timeout: 30
-    MemorySize: 512
+    Timeout: 180  # Increased for audio processing
+    MemorySize: 1024  # Increased for audio handling
     Runtime: python3.10
 
 Parameters:
@@ -14,6 +14,12 @@ Parameters:
     Description: YouTube Data API v3 Key
     Default: "AIzaSyAsZceUU693rWYz1cuXSSzQbHKlM4gBGfU"
     NoEcho: true
+    
+  OpenAIApiKey:
+    Type: String
+    Description: OpenAI API Key for Whisper (optional - leave empty for demo mode)
+    Default: ""
+    NoEcho: true
 
 Resources:
   VideoAnalysisFunction:
@@ -21,10 +27,11 @@ Resources:
     Properties:
       CodeUri: ../src/
       Handler: handlers.video_handler.lambda_handler
-      Description: Analyzes YouTube videos for topic mentions with real API
+      Description: Analyzes YouTube videos with real transcription
       Environment:
         Variables:
           YOUTUBE_API_KEY: !Ref YouTubeApiKey
+          OPENAI_API_KEY: !Ref OpenAIApiKey
       Policies:
         - AWSLambdaBasicExecutionRole
       Events:
@@ -36,5 +43,5 @@ Resources:
 
 Outputs:
   VideoAnalysisEndpoint:
-    Description: Video Analysis Endpoint
+    Description: Video Analysis Endpoint with Real Transcription
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/analyze"
