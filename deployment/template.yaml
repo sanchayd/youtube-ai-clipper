@@ -4,7 +4,7 @@ Description: YouTube AI Clipper - With AWS Transcribe Integration
 
 Globals:
   Function:
-    Timeout: 180  # 3 minutes for transcription processing
+    Timeout: 180
     MemorySize: 1024
     Runtime: python3.10
 
@@ -16,7 +16,6 @@ Parameters:
     NoEcho: true
 
 Resources:
-  # S3 Bucket for audio files and transcription results
   TranscriptionBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -25,7 +24,7 @@ Resources:
         Rules:
           - Id: CleanupTempFiles
             Status: Enabled
-            ExpirationInDays: 1  # Delete files after 1 day
+            ExpirationInDays: 1
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -42,7 +41,7 @@ Resources:
         Variables:
           YOUTUBE_API_KEY: !Ref YouTubeApiKey
           TRANSCRIPTION_BUCKET: !Ref TranscriptionBucket
-          AWS_REGION: !Ref AWS::Region
+          # AWS_REGION is automatically provided by Lambda - don't set it manually
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -51,7 +50,9 @@ Resources:
                 - s3:PutObject
                 - s3:GetObject
                 - s3:DeleteObject
-              Resource: !Sub "${TranscriptionBucket}/*"
+              Resource: 
+                - !Sub "arn:aws:s3:::${TranscriptionBucket}/*"
+                - !Sub "arn:aws:s3:::${TranscriptionBucket}"
             - Effect: Allow
               Action:
                 - transcribe:StartTranscriptionJob
