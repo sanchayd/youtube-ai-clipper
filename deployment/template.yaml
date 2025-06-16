@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: YouTube AI Clipper - With Optional Real Transcription
+Description: YouTube AI Clipper - With AWS Transcribe Integration
 
 Globals:
   Function:
-    Timeout: 180
+    Timeout: 180  # 3 minutes for transcription processing
     MemorySize: 1024
     Runtime: python3.10
 
@@ -16,18 +16,48 @@ Parameters:
     NoEcho: true
 
 Resources:
+  # S3 Bucket for audio files and transcription results
+  TranscriptionBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "youtube-ai-clipper-transcription-${AWS::AccountId}"
+      LifecycleConfiguration:
+        Rules:
+          - Id: CleanupTempFiles
+            Status: Enabled
+            ExpirationInDays: 1  # Delete files after 1 day
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
   VideoAnalysisFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../src/
       Handler: handlers.video_handler.lambda_handler
-      Description: Analyzes YouTube videos with intelligent transcription fallbacks
+      Description: Analyzes YouTube videos with AWS Transcribe
       Environment:
         Variables:
           YOUTUBE_API_KEY: !Ref YouTubeApiKey
-          # OpenAI key will be detected from local environment if available
+          TRANSCRIPTION_BUCKET: !Ref TranscriptionBucket
+          AWS_REGION: !Ref AWS::Region
       Policies:
         - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+                - s3:DeleteObject
+              Resource: !Sub "${TranscriptionBucket}/*"
+            - Effect: Allow
+              Action:
+                - transcribe:StartTranscriptionJob
+                - transcribe:GetTranscriptionJob
+                - transcribe:DeleteTranscriptionJob
+              Resource: "*"
       Events:
         VideoAnalysisApi:
           Type: Api
@@ -37,5 +67,9 @@ Resources:
 
 Outputs:
   VideoAnalysisEndpoint:
-    Description: Video Analysis Endpoint with Intelligent Transcription
+    Description: Video Analysis Endpoint with AWS Transcribe
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/analyze"
+    
+  TranscriptionBucket:
+    Description: S3 Bucket for transcription files
+    Value: !Ref TranscriptionBucket
