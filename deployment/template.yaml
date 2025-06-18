@@ -38,7 +38,7 @@ Resources:
       Handler: handlers.video_handler.lambda_handler
       Description: Analyzes YouTube videos with AWS Transcribe
       Layers:
-        - arn:aws:lambda:us-east-1:767242440716:layer:ffmpeg-layer:1
+        - arn:aws:lambda:us-east-1:767242440716:layer:ffmpeg-layer:2
       Environment:
         Variables:
           YOUTUBE_API_KEY: !Ref YouTubeApiKey
@@ -75,7 +75,7 @@ Resources:
       Handler: handlers.environment_diagnostic.lambda_handler
       Description: Check Lambda environment capabilities
       Layers:
-        - arn:aws:lambda:us-east-1:767242440716:layer:ffmpeg-layer:1
+        - arn:aws:lambda:us-east-1:767242440716:layer:ffmpeg-layer:2
       Environment:
         Variables:
           TRANSCRIPTION_BUCKET: !Ref TranscriptionBucket
