@@ -37,11 +37,13 @@ Resources:
       CodeUri: ../src/
       Handler: handlers.video_handler.lambda_handler
       Description: Analyzes YouTube videos with AWS Transcribe
+      Layers:
+        - arn:aws:lambda:us-east-1:767242440716:layer:ffmpeg-layer:1
       Environment:
         Variables:
           YOUTUBE_API_KEY: !Ref YouTubeApiKey
           TRANSCRIPTION_BUCKET: !Ref TranscriptionBucket
-          # AWS_REGION is automatically provided by Lambda - don't set it manually
+          PATH: "/opt/bin:/var/lang/bin:/usr/local/bin:/usr/bin:/bin"
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -50,7 +52,7 @@ Resources:
                 - s3:PutObject
                 - s3:GetObject
                 - s3:DeleteObject
-              Resource: 
+              Resource:
                 - !Sub "arn:aws:s3:::${TranscriptionBucket}/*"
                 - !Sub "arn:aws:s3:::${TranscriptionBucket}"
             - Effect: Allow
@@ -66,6 +68,25 @@ Resources:
             Path: /analyze
             Method: post
 
+  EnvironmentDiagnosticFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.environment_diagnostic.lambda_handler
+      Description: Check Lambda environment capabilities
+      Layers:
+        - arn:aws:lambda:us-east-1:767242440716:layer:ffmpeg-layer:1
+      Environment:
+        Variables:
+          TRANSCRIPTION_BUCKET: !Ref TranscriptionBucket
+          PATH: "/opt/bin:/var/lang/bin:/usr/local/bin:/usr/bin:/bin"
+      Events:
+        EnvironmentDiagnosticApi:
+          Type: Api
+          Properties:
+            Path: /environment
+            Method: get
+
 Outputs:
   VideoAnalysisEndpoint:
     Description: Video Analysis Endpoint with AWS Transcribe
@@ -75,18 +96,6 @@ Outputs:
     Description: S3 Bucket for transcription files
     Value: !Ref TranscriptionBucket
 
-  EnvironmentDiagnosticFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ../src/
-      Handler: handlers.environment_diagnostic.lambda_handler
-      Description: Check Lambda environment capabilities
-      Environment:
-        Variables:
-          TRANSCRIPTION_BUCKET: !Ref TranscriptionBucket
-      Events:
-        EnvironmentDiagnosticApi:
-          Type: Api
-          Properties:
-            Path: /environment
-            Method: get
+  EnvironmentDiagnosticEndpoint:
+    Description: Environment Diagnostic Endpoint
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/environment"
