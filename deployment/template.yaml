@@ -74,3 +74,19 @@ Outputs:
   TranscriptionBucket:
     Description: S3 Bucket for transcription files
     Value: !Ref TranscriptionBucket
+
+  EnvironmentDiagnosticFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../src/
+      Handler: handlers.environment_diagnostic.lambda_handler
+      Description: Check Lambda environment capabilities
+      Environment:
+        Variables:
+          TRANSCRIPTION_BUCKET: !Ref TranscriptionBucket
+      Events:
+        EnvironmentDiagnosticApi:
+          Type: Api
+          Properties:
+            Path: /environment
+            Method: get
